@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SignalR Client</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/5.0.10/signalr.min.js"></script>
+</head>
+<body>
+    <h1>SignalR Client</h1>
+    <div>
+        <p id="status">Waiting for connection...</p>
+        <div id="updates"><h3>Policy Expiring Notifications:</h3></div>
+    </div>
+
+    <script>
+        // Define the client ID and SignalR hub URL
+        const clientId = "550224";// 550224,441562,551383
+        //const hubUrl = `https://localhost:7173/hubs/policy?clientId=${clientId}`;
+        const hubUrl = `https://localhost:7173/hubs/policy`;
+
+        // Create the connection
+        const hubConnection = new signalR.HubConnectionBuilder()
+            .withUrl(hubUrl)
+            .build();
+
+        // Handle incoming messages for policy updates
+        hubConnection.on("ReceiveClientUpdates", function (notification) {
+            // Create a new paragraph element
+            const newMessage = document.createElement("p");
+            newMessage.textContent = `Message received Policy Updates: ${notification.message}`;
+
+            // Append the new message to the updates div
+            document.getElementById("updates").appendChild(newMessage);
+
+            // Log to console
+            console.log(`Message received--> Policy Updates: ${notification}`);
+        });
+
+        // Start the connection
+        hubConnection.start()
+            .then(function () {
+                document.getElementById("status").textContent = "SignalR connection started.";
+                console.log("SignalR connection started.");
+
+                // Join the client group
+                hubConnection.invoke("JoinClientGroup", clientId)
+                    .then(function () {
+                        console.log(`Joined group for client: ${clientId}`);
+                    })
+                    .catch(function (err) {
+                        console.error("Error joining group: " + err.toString());
+                    });
+            })
+            .catch(function (err) {
+                document.getElementById("status").textContent = "Error connecting to SignalR: " + err.toString();
+                console.error("Error connecting to SignalR: " + err.toString());
+            });
+
+        // Handle page unload to gracefully close the connection
+        window.addEventListener('beforeunload', function () {
+            hubConnection.stop().then(function () {
+                console.log("SignalR connection closed.");
+            }).catch(function (err) {
+                console.error("Error stopping SignalR connection: " + err.toString());
+            });
+        });
+    </script>
+</body>
+</html>
